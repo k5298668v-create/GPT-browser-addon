@@ -1,0 +1,16 @@
+{
+  "name": "gpt-browser-addon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local GPT engineering agent with Brave browser automation and skills",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/agent-server",
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
