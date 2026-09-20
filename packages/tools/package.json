@@ -1,10 +1,10 @@
 {
-  "name": "@localengineer/browser",
+  "name": "@localengineer/tools",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "playwright": "^1.55.0"
+    "@localengineer/browser": "0.1.0"
   }
 }
