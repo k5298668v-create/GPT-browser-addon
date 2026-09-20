@@ -54,7 +54,7 @@ export class BraveBrowser {
   async clickElement(elementId: string): Promise<void> {
     const page = this.getPage();
 
-    const match = /^(link|button|input)-(\\d+)$/.exec(elementId);
+    const match = /^(link|button|input)-(\d+)$/.exec(elementId);
 
     if (!match) {
       throw new Error(`Invalid element ID: ${elementId}`);
