@@ -41,6 +41,27 @@ export class BrowserTools {
     }
   }
 
+  async scroll(
+    direction: "up" | "down",
+    amount = 700
+  ): Promise<ToolResult> {
+    try {
+      await this.browser.scroll(direction, amount);
+
+      return {
+        success: true,
+        output: `Scrolled ${direction} by ${amount}px`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error)
+      };
+    }
+  }
+
   async click(selector: string): Promise<ToolResult> {
     try {
       await this.browser.click(selector);

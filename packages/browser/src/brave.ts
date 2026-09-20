@@ -62,6 +62,20 @@ export class BraveBrowser {
     await this.getPage().locator(selector).fill(text);
   }
 
+  async scroll(
+    direction: "up" | "down",
+    amount = 700
+  ): Promise<void> {
+    const page = this.getPage();
+
+    const distance =
+      direction === "down"
+        ? amount
+        : -amount;
+
+    await page.mouse.wheel(0, distance);
+  }
+
   async screenshot(path: string): Promise<void> {
     await this.getPage().screenshot({
       path,

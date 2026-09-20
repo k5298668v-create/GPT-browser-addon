@@ -28,6 +28,12 @@ export class ToolRouter {
           String(call.arguments.selector)
         );
 
+      case "browser.scroll":
+        return this.browserTools.scroll(
+          String(call.arguments.direction) as "up" | "down",
+          Number(call.arguments.amount ?? 700)
+        );
+
       case "browser.type":
         return this.browserTools.type(
           String(call.arguments.selector),
