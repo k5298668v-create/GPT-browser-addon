@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Select Test</title>
+</head>
+<body>
+  <h1>Select Test</h1>
+
+  <label for="country">Country</label>
+
+  <select id="country" name="country">
+    <option value="">Choose a country</option>
+    <option value="malaysia">Malaysia</option>
+    <option value="singapore">Singapore</option>
+    <option value="thailand">Thailand</option>
+  </select>
+
+  <p id="result">No country selected</p>
+
+  <script>
+    document.querySelector("#country").addEventListener("change", (event) => {
+      const select = event.target;
+
+      document.querySelector("#result").textContent =
+        select.value
+          ? `Selected: ${select.options[select.selectedIndex].text}`
+          : "No country selected";
+    });
+  </script>
+</body>
+</html>

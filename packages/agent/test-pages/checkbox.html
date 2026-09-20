@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Checkbox Test</title>
+</head>
+<body>
+  <h1>Checkbox Test</h1>
+
+  <label>
+    <input id="terms" type="checkbox">
+    I agree to the terms
+  </label>
+
+  <p id="result">Not accepted</p>
+
+  <script>
+    document.querySelector("#terms").addEventListener("change", (event) => {
+      const checkbox = event.target;
+
+      document.querySelector("#result").textContent =
+        checkbox.checked ? "Accepted" : "Not accepted";
+    });
+  </script>
+</body>
+</html>

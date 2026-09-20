@@ -1,21 +1,40 @@
-import { BraveBrowser } from "@localengineer/browser";
-import { ToolRouter } from "@localengineer/tools";
-import { AgentLoop } from "./agent-loop.js";
+import { BrowserTools } from "@localengineer/tools";
 import { BrowserPlanner } from "./browser-planner.js";
 
-const browser = new BraveBrowser();
-
-await browser.connect();
-
-try {
-  const tools = new ToolRouter(browser);
+async function runLoop() {
+  const tools = new BrowserTools();
   const planner = new BrowserPlanner();
 
-  const agent = new AgentLoop(planner, tools);
+  console.log("==========================================");
+  console.log("    MULTI-STEP AUTOMATION LOOP           ");
+  console.log("==========================================");
 
-  await agent.run(
-    "Open http://127.0.0.1:8080/form.html, enter my name as Kevin, enter the message Hello LocalEngineer, and click Submit"
-  );
-} finally {
-  await browser.close();
+  const goal = "Fill form and submit";
+
+  // 先打开页面
+  await tools.open("http://127.0.0.1:8080/form.html");
+
+  let step = 1;
+  let isComplete = false;
+
+  while (!isComplete && step <= 10) {
+    console.log(`\n--- [Step ${step}] Taking Snapshot ---`);
+    const observation = await tools.snapshot();
+
+    const action = planner.planNextAction(goal, observation);
+    console.log(`[Step ${step}] Planned Action:`, action);
+
+    if (action.tool === "type") {
+      await tools.type(action.args.selector, action.args.text);
+    } else if (action.tool === "click") {
+      await tools.click(action.args.selector);
+    } else if (action.tool === "complete") {
+      console.log("\n✅ Task Finished:", action.args.message);
+      isComplete = true;
+    }
+
+    step++;
+  }
 }
+
+runLoop().catch(console.error);
