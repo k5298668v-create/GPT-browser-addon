@@ -1,5 +1,8 @@
 import type { ToolCall, ToolRouter } from "@localengineer/tools";
-import type { MockPlanner, PlannerObservation } from "./mock-planner.js";
+import type {
+  MockPlanner,
+  PlannerObservation
+} from "./mock-planner.js";
 
 export class AgentLoop {
   constructor(
@@ -38,7 +41,7 @@ export class AgentLoop {
       const result = await this.tools.execute(call);
 
       console.log("Observation:");
-      console.log(result);
+      console.dir(result, { depth: null });
       console.log();
 
       observation = {
