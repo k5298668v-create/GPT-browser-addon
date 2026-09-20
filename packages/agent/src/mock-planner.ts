@@ -1,9 +1,5 @@
 import type { ToolCall } from "@localengineer/tools";
-
-export interface PlannerObservation {
-  tool?: string;
-  result?: unknown;
-}
+import type { Planner, PlannerObservation } from "./planner.js";
 
 interface InspectResult {
   success: boolean;
@@ -25,7 +21,7 @@ interface InspectResult {
   error?: string;
 }
 
-export class MockPlanner {
+export class MockPlanner implements Planner {
   private step = 0;
   private wantsClick = false;
 

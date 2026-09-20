@@ -1,5 +1,9 @@
 import { BraveBrowser } from "@localengineer/browser";
 import { BrowserTools } from "./browser-tools.js";
+import {
+  getToolDefinitions,
+  type ToolDefinition
+} from "./tool-registry.js";
 
 export interface ToolCall {
   name: string;
@@ -11,6 +15,10 @@ export class ToolRouter {
 
   constructor(browser: BraveBrowser) {
     this.browserTools = new BrowserTools(browser);
+  }
+
+  getDefinitions(): ToolDefinition[] {
+    return getToolDefinitions();
   }
 
   async execute(call: ToolCall): Promise<unknown> {

@@ -1,12 +1,12 @@
 import type { ToolCall, ToolRouter } from "@localengineer/tools";
 import type {
-  MockPlanner,
+  Planner,
   PlannerObservation
-} from "./mock-planner.js";
+} from "./planner.js";
 
 export class AgentLoop {
   constructor(
-    private planner: MockPlanner,
+    private planner: Planner,
     private tools: ToolRouter,
     private maxSteps = 10
   ) {}

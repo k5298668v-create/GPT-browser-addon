@@ -3,5 +3,6 @@ export { AgentLoop } from "./agent-loop.js";
 export { MockPlanner } from "./mock-planner.js";
 
 export type {
+  Planner,
   PlannerObservation
-} from "./mock-planner.js";
+} from "./planner.js";
