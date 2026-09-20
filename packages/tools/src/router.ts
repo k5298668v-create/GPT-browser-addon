@@ -15,6 +15,9 @@ export class ToolRouter {
 
   async execute(call: ToolCall): Promise<unknown> {
     switch (call.name) {
+      case "browser.inspect":
+        return this.browserTools.inspect();
+
       case "browser.open":
         return this.browserTools.open(
           String(call.arguments.url)

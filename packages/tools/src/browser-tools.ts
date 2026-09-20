@@ -41,6 +41,24 @@ export class BrowserTools {
     }
   }
 
+  async inspect(): Promise<ToolResult> {
+    try {
+      const result = await this.browser.inspect();
+
+      return {
+        success: true,
+        output: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error)
+      };
+    }
+  }
+
   async scroll(
     direction: "up" | "down",
     amount = 700

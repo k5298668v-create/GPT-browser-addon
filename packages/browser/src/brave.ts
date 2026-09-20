@@ -83,6 +83,57 @@ export class BraveBrowser {
     });
   }
 
+  async inspect(): Promise<{
+    url: string;
+    title: string;
+    links: Array<{
+      text: string;
+      href: string;
+    }>;
+    buttons: string[];
+    inputs: Array<{
+      type: string;
+      name: string;
+      placeholder: string;
+      ariaLabel: string;
+    }>;
+  }> {
+    const page = this.getPage();
+
+    const links = await page.locator("a").evaluateAll(
+      (elements) =>
+        elements.map((element) => ({
+          text: (element.textContent ?? "").trim(),
+          href: (element as HTMLAnchorElement).href
+        })).filter((link) => link.text || link.href)
+    );
+
+    const buttons = await page.locator("button").evaluateAll(
+      (elements) =>
+        elements
+          .map((element) => (element.textContent ?? "").trim())
+          .filter(Boolean)
+    );
+
+    const inputs = await page.locator("input, textarea").evaluateAll(
+      (elements) =>
+        elements.map((element) => ({
+          type: (element as HTMLInputElement).type || element.tagName.toLowerCase(),
+          name: (element as HTMLInputElement).name || "",
+          placeholder: (element as HTMLInputElement).placeholder || "",
+          ariaLabel: element.getAttribute("aria-label") || ""
+        }))
+    );
+
+    return {
+      url: page.url(),
+      title: await page.title(),
+      links,
+      buttons,
+      inputs
+    };
+  }
+
   async currentPage() {
     const page = this.getPage();
 
