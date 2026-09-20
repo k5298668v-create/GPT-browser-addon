@@ -5,6 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "openai": "^5.12.2"
+    "@localengineer/browser": "0.1.0",
+    "@localengineer/skills": "0.1.0",
+    "@localengineer/tools": "0.1.0"
   }
 }

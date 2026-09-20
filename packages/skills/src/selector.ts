@@ -7,48 +7,99 @@ export class SkillSelector {
     const selected: Skill[] = [];
 
     const add = (name: string) => {
-      const skill = skills.find((s) => s.name === name);
+      const skill = skills.find(
+        (skill) => skill.name === name
+      );
 
       if (skill && !selected.includes(skill)) {
         selected.push(skill);
       }
     };
 
-    if (
-      /browser|brave|web|website|webpage|click|type|search|open.*url/i.test(
-        text
-      )
-    ) {
+    const browserWords = [
+      "browser",
+      "brave",
+      "web",
+      "website",
+      "webpage",
+      "click",
+      "type",
+      "search",
+      "open",
+      "visit",
+      "navigate",
+      "url"
+    ];
+
+    const codingWords = [
+      "code",
+      "coding",
+      "program",
+      "npm",
+      "node",
+      "typescript",
+      "javascript",
+      "python",
+      "bug",
+      "error",
+      "implement",
+      "fix"
+    ];
+
+    const testingWords = [
+      "test",
+      "testing",
+      "tests",
+      "spec",
+      "verify",
+      "validation"
+    ];
+
+    const gitWords = [
+      "git",
+      "commit",
+      "branch",
+      "merge",
+      "push",
+      "pull",
+      "repository",
+      "repo",
+      "diff"
+    ];
+
+    const linuxWords = [
+      "linux",
+      "terminal",
+      "shell",
+      "file",
+      "folder",
+      "directory",
+      "process",
+      "package",
+      "apt",
+      "system"
+    ];
+
+    const containsAny = (words: string[]) =>
+      words.some((word) => text.includes(word));
+
+    if (containsAny(browserWords)) {
       add("browser");
     }
 
-    if (
-      /code|coding|program|npm|node|typescript|javascript|python|bug|error|implement|fix/i.test(
-        text
-      )
-    ) {
+    if (containsAny(codingWords)) {
       add("coding");
     }
 
-    if (
-      /test|testing|spec|verify|validation/i.test(text)
-    ) {
+    if (containsAny(testingWords)) {
       add("testing");
     }
 
-    if (
-      /git|commit|branch|merge|push|pull|repository|repo|diff/i.test(
-        text
-      )
-    ) {
+    if (containsAny(gitWords)) {
       add("git");
     }
 
-    if (
-      /linux|terminal|shell|file|folder|directory|process|package|apt|system/i.test(
-        text
-      )
-    ) {
+    if (containsAny(linuxWords)) {
       add("linux");
     }
 

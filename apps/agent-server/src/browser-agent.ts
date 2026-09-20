@@ -10,11 +10,16 @@ const tools = new ToolRouter(browser);
 
 const agent = new LocalAgent(
   browser,
-  tools
+  tools,
+  `${process.cwd()}/skills`
 );
 
 const task =
   process.argv.slice(2).join(" ") ||
   "Open example.com and read the page";
 
-await agent.run(task);
+try {
+  await agent.run(task);
+} finally {
+  await browser.close();
+}

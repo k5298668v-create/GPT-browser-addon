@@ -55,7 +55,10 @@ export class BraveBrowser {
     await this.getPage().locator(selector).click();
   }
 
-  async type(selector: string, text: string): Promise<void> {
+  async type(
+    selector: string,
+    text: string
+  ): Promise<void> {
     await this.getPage().locator(selector).fill(text);
   }
 
@@ -74,5 +77,10 @@ export class BraveBrowser {
       title: await page.title(),
       text: await this.read()
     };
+  }
+
+  async close(): Promise<void> {
+    await this.browser?.close();
+    this.browser = undefined;
   }
 }
