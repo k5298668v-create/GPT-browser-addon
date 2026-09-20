@@ -38,18 +38,18 @@ export const browserToolDefinitions: ToolDefinition[] = [
     }
   },
   {
-    name: "browser.click",
+    name: "browser.clickElement",
     description:
-      "Click an element on the current Brave page using a Playwright selector.",
+      "Click an inspected element on the current Brave page using its stable element ID.",
     parameters: {
       type: "object",
       properties: {
-        selector: {
+        elementId: {
           type: "string",
-          description: "A stable selector identifying the element."
+          description: "The element ID returned by browser.inspect."
         }
       },
-      required: ["selector"]
+      required: ["elementId"]
     }
   },
   {

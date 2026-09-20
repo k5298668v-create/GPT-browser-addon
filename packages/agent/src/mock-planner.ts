@@ -6,18 +6,27 @@ interface InspectResult {
   output?: {
     url: string;
     title: string;
+
     links: Array<{
+      id: string;
       text: string;
       href: string;
     }>;
-    buttons: string[];
+
+    buttons: Array<{
+      id: string;
+      text: string;
+    }>;
+
     inputs: Array<{
+      id: string;
       type: string;
       name: string;
       placeholder: string;
       ariaLabel: string;
     }>;
   };
+
   error?: string;
 }
 
@@ -56,7 +65,7 @@ export class MockPlanner implements Planner {
       };
     }
 
-    // For a read task, inspect first, then read.
+    // Read task.
     if (!this.wantsClick && this.step === 1) {
       this.step++;
 
@@ -66,7 +75,7 @@ export class MockPlanner implements Planner {
       };
     }
 
-    // For a click task, inspect the page before choosing a selector.
+    // Click task: inspect before choosing an element.
     if (this.wantsClick && this.step === 1) {
       this.step++;
 
@@ -76,9 +85,10 @@ export class MockPlanner implements Planner {
       };
     }
 
-    // Use the actual inspection result to find "Learn more".
+    // Find "Learn more" from the inspection result.
     if (this.wantsClick && this.step === 2) {
-      const inspection = observation?.result as InspectResult | undefined;
+      const inspection =
+        observation?.result as InspectResult | undefined;
 
       const links = inspection?.output?.links ?? [];
 
@@ -91,20 +101,21 @@ export class MockPlanner implements Planner {
         console.log(
           "Planner: Could not find the Learn more link."
         );
+
         return null;
       }
 
       this.step++;
 
       return {
-        name: "browser.click",
+        name: "browser.clickElement",
         arguments: {
-          selector: `a[href="${learnMore.href}"]`
+          elementId: learnMore.id
         }
       };
     }
 
-    // Verify the result after clicking.
+    // Verify navigation after clicking.
     if (this.wantsClick && this.step === 3) {
       this.step++;
 

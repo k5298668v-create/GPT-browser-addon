@@ -34,6 +34,11 @@ export class ToolRouter {
       case "browser.read":
         return this.browserTools.read();
 
+      case "browser.clickElement":
+        return this.browserTools.clickElement(
+          String(call.arguments.elementId)
+        );
+
       case "browser.click":
         return this.browserTools.click(
           String(call.arguments.selector)

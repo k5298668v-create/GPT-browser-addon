@@ -80,6 +80,24 @@ export class BrowserTools {
     }
   }
 
+  async clickElement(elementId: string): Promise<ToolResult> {
+    try {
+      await this.browser.clickElement(elementId);
+
+      return {
+        success: true,
+        output: `Clicked ${elementId}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : String(error)
+      };
+    }
+  }
+
   async click(selector: string): Promise<ToolResult> {
     try {
       await this.browser.click(selector);

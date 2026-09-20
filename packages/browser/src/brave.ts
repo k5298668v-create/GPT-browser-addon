@@ -51,6 +51,39 @@ export class BraveBrowser {
     return this.getPage().locator("body").innerText();
   }
 
+  async clickElement(elementId: string): Promise<void> {
+    const page = this.getPage();
+
+    const match = /^(link|button|input)-(\\d+)$/.exec(elementId);
+
+    if (!match) {
+      throw new Error(`Invalid element ID: ${elementId}`);
+    }
+
+    const [, type, indexText] = match;
+    const index = Number(indexText) - 1;
+
+    if (index < 0) {
+      throw new Error(`Invalid element index: ${elementId}`);
+    }
+
+    const selector =
+      type === "link"
+        ? "a"
+        : type === "button"
+          ? "button"
+          : "input, textarea";
+
+    const elements = page.locator(selector);
+    const count = await elements.count();
+
+    if (index >= count) {
+      throw new Error(`Element not found: ${elementId}`);
+    }
+
+    await elements.nth(index).click();
+  }
+
   async click(selector: string): Promise<void> {
     await this.getPage().locator(selector).click();
   }
@@ -87,11 +120,16 @@ export class BraveBrowser {
     url: string;
     title: string;
     links: Array<{
+      id: string;
       text: string;
       href: string;
     }>;
-    buttons: string[];
+    buttons: Array<{
+      id: string;
+      text: string;
+    }>;
     inputs: Array<{
+      id: string;
       type: string;
       name: string;
       placeholder: string;
@@ -102,26 +140,37 @@ export class BraveBrowser {
 
     const links = await page.locator("a").evaluateAll(
       (elements) =>
-        elements.map((element) => ({
-          text: (element.textContent ?? "").trim(),
-          href: (element as HTMLAnchorElement).href
-        })).filter((link) => link.text || link.href)
+        elements
+          .map((element, index) => ({
+            id: `link-${index + 1}`,
+            text: (element.textContent ?? "").trim(),
+            href: (element as HTMLAnchorElement).href
+          }))
+          .filter((link) => link.text || link.href)
     );
 
     const buttons = await page.locator("button").evaluateAll(
       (elements) =>
         elements
-          .map((element) => (element.textContent ?? "").trim())
-          .filter(Boolean)
+          .map((element, index) => ({
+            id: `button-${index + 1}`,
+            text: (element.textContent ?? "").trim()
+          }))
+          .filter((button) => button.text)
     );
 
     const inputs = await page.locator("input, textarea").evaluateAll(
       (elements) =>
-        elements.map((element) => ({
-          type: (element as HTMLInputElement).type || element.tagName.toLowerCase(),
+        elements.map((element, index) => ({
+          id: `input-${index + 1}`,
+          type:
+            (element as HTMLInputElement).type ||
+            element.tagName.toLowerCase(),
           name: (element as HTMLInputElement).name || "",
-          placeholder: (element as HTMLInputElement).placeholder || "",
-          ariaLabel: element.getAttribute("aria-label") || ""
+          placeholder:
+            (element as HTMLInputElement).placeholder || "",
+          ariaLabel:
+            element.getAttribute("aria-label") || ""
         }))
     );
 
@@ -133,6 +182,7 @@ export class BraveBrowser {
       inputs
     };
   }
+
 
   async currentPage() {
     const page = this.getPage();
