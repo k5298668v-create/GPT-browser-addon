@@ -88,6 +88,15 @@ export class BraveBrowser {
     await this.getPage().locator(selector).click();
   }
 
+  async selectOption(
+    selector: string,
+    value: string
+  ): Promise<void> {
+    await this.getPage()
+      .locator(selector)
+      .selectOption(value);
+  }
+
   async type(
     selector: string,
     text: string
@@ -119,6 +128,7 @@ export class BraveBrowser {
   async inspect(): Promise<{
     url: string;
     title: string;
+    text: string;
     links: Array<{
       id: string;
       text: string;
@@ -134,6 +144,21 @@ export class BraveBrowser {
       name: string;
       placeholder: string;
       ariaLabel: string;
+      value: string;
+      checked: boolean;
+      label: string;
+    }>;
+    selects: Array<{
+      id: string;
+      name: string;
+      ariaLabel: string;
+      value: string;
+      selectedText: string;
+      label: string;
+      options: Array<{
+        value: string;
+        text: string;
+      }>;
     }>;
   }> {
     const page = this.getPage();
@@ -170,19 +195,69 @@ export class BraveBrowser {
           placeholder:
             (element as HTMLInputElement).placeholder || "",
           ariaLabel:
-            element.getAttribute("aria-label") || ""
+            element.getAttribute("aria-label") || "",
+          value:
+            (element as HTMLInputElement).value || "",
+          checked:
+            (element as HTMLInputElement).checked,
+          label:
+            (
+              element.id
+                ? (
+                    element.ownerDocument.querySelector(
+                      `label[for="${element.id}"]`
+                    )?.textContent ?? ""
+                  )
+                : ""
+            ).trim() ||
+            (element.closest("label")?.textContent ?? "").trim()
         }))
+    );
+
+    const selects = await page.locator("select").evaluateAll(
+      (elements) =>
+        elements.map((element, index) => {
+          const select = element as HTMLSelectElement;
+
+          return {
+            id: `select-${index + 1}`,
+            name: select.name || "",
+            ariaLabel:
+              select.getAttribute("aria-label") || "",
+            value: select.value || "",
+            selectedText:
+              select.selectedOptions[0]?.textContent?.trim() || "",
+            label:
+              (
+                select.id
+                  ? (
+                      select.ownerDocument.querySelector(
+                        `label[for="${select.id}"]`
+                      )?.textContent ?? ""
+                    )
+                  : ""
+              ).trim() ||
+              (select.closest("label")?.textContent ?? "").trim(),
+            options: Array.from(select.options).map(
+              (option) => ({
+                value: option.value,
+                text: option.textContent?.trim() || ""
+              })
+            )
+          };
+        })
     );
 
     return {
       url: page.url(),
       title: await page.title(),
+      text: await page.locator("body").innerText(),
       links,
       buttons,
-      inputs
+      inputs,
+      selects
     };
   }
-
 
   async currentPage() {
     const page = this.getPage();
@@ -192,6 +267,22 @@ export class BraveBrowser {
       title: await page.title(),
       text: await this.read()
     };
+  }
+
+  async back(): Promise<void> {
+    const page = this.getPage();
+
+    await page.goBack({
+      waitUntil: "domcontentloaded"
+    });
+  }
+
+  async forward(): Promise<void> {
+    const page = this.getPage();
+
+    await page.goForward({
+      waitUntil: "domcontentloaded"
+    });
   }
 
   async close(): Promise<void> {

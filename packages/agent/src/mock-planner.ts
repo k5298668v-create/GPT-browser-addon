@@ -1,5 +1,9 @@
 import type { ToolCall } from "@localengineer/tools";
-import type { Planner, PlannerObservation } from "./planner.js";
+import type {
+  Planner,
+  PlannerDecision,
+  PlannerObservation
+} from "./planner.js";
 
 interface InspectResult {
   success: boolean;
@@ -42,11 +46,14 @@ export class MockPlanner implements Planner {
   plan(
     task: string,
     observation?: PlannerObservation
-  ): ToolCall | null {
+  ): PlannerDecision {
     const lower = task.toLowerCase();
 
     if (!lower.includes("example.com")) {
-      return null;
+      return {
+        type: "failed",
+        reason: "MockPlanner only supports example.com tasks."
+      };
     }
 
     this.wantsClick =
@@ -57,11 +64,16 @@ export class MockPlanner implements Planner {
     if (this.step === 0) {
       this.step++;
 
-      return {
+      const call: ToolCall = {
         name: "browser.open",
         arguments: {
           url: "https://example.com"
         }
+      };
+
+      return {
+        type: "action",
+        call
       };
     }
 
@@ -69,9 +81,14 @@ export class MockPlanner implements Planner {
     if (!this.wantsClick && this.step === 1) {
       this.step++;
 
-      return {
+      const call: ToolCall = {
         name: "browser.read",
         arguments: {}
+      };
+
+      return {
+        type: "action",
+        call
       };
     }
 
@@ -79,9 +96,14 @@ export class MockPlanner implements Planner {
     if (this.wantsClick && this.step === 1) {
       this.step++;
 
-      return {
+      const call: ToolCall = {
         name: "browser.inspect",
         arguments: {}
+      };
+
+      return {
+        type: "action",
+        call
       };
     }
 
@@ -94,24 +116,28 @@ export class MockPlanner implements Planner {
 
       const learnMore = links.find(
         (link) =>
-          link.text.toLowerCase() === "learn more"
+          link.text.trim().toLowerCase() === "learn more"
       );
 
       if (!learnMore) {
-        console.log(
-          "Planner: Could not find the Learn more link."
-        );
-
-        return null;
+        return {
+          type: "failed",
+          reason: "Could not find the Learn more link."
+        };
       }
 
       this.step++;
 
-      return {
+      const call: ToolCall = {
         name: "browser.clickElement",
         arguments: {
           elementId: learnMore.id
         }
+      };
+
+      return {
+        type: "action",
+        call
       };
     }
 
@@ -119,12 +145,20 @@ export class MockPlanner implements Planner {
     if (this.wantsClick && this.step === 3) {
       this.step++;
 
-      return {
+      const call: ToolCall = {
         name: "browser.inspect",
         arguments: {}
       };
+
+      return {
+        type: "action",
+        call
+      };
     }
 
-    return null;
+    // Nothing else to do.
+    return {
+      type: "done"
+    };
   }
 }

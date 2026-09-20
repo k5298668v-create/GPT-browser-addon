@@ -1,4 +1,4 @@
-import { BraveBrowser } from "@localengineer/browser";
+import { execSync } from "child_process";
 
 export interface ToolResult {
   success: boolean;
@@ -7,15 +7,19 @@ export interface ToolResult {
 }
 
 export class BrowserTools {
-  constructor(private browser: BraveBrowser) {}
+  // 不再强依赖 BraveBrowser 实例，直接通过 agent-browser CLI 驱动
+  constructor() {}
+
+  private runCmd(cmd: string): string {
+    return execSync(cmd, { encoding: "utf-8" }).trim();
+  }
 
   async open(url: string): Promise<ToolResult> {
     try {
-      const result = await this.browser.open(url);
-
+      const output = this.runCmd(`npx agent-browser open "${url}"`);
       return {
         success: true,
-        output: result
+        output
       };
     } catch (error) {
       return {
@@ -25,13 +29,13 @@ export class BrowserTools {
     }
   }
 
-  async read(): Promise<ToolResult> {
+  // 替代原有的 inspect()，获取 agent-browser 语义树快照（带有 @e1, @e2 等 ref）
+  async snapshot(): Promise<ToolResult> {
     try {
-      const text = await this.browser.read();
-
+      const output = this.runCmd(`npx agent-browser snapshot`);
       return {
         success: true,
-        output: text
+        output
       };
     } catch (error) {
       return {
@@ -41,70 +45,34 @@ export class BrowserTools {
     }
   }
 
-  async inspect(): Promise<ToolResult> {
+  // 点击元素：支持 ref（如 "@e2"）、CSS 选择器或自然文本
+  async click(selectorOrRef: string): Promise<ToolResult> {
     try {
-      const result = await this.browser.inspect();
-
+      const output = this.runCmd(`npx agent-browser click "${selectorOrRef}"`);
       return {
         success: true,
-        output: result
+        output: `Clicked ${selectorOrRef}`
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : String(error)
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
 
-  async scroll(
-    direction: "up" | "down",
-    amount = 700
-  ): Promise<ToolResult> {
-    try {
-      await this.browser.scroll(direction, amount);
-
-      return {
-        success: true,
-        output: `Scrolled ${direction} by ${amount}px`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error
-          ? error.message
-          : String(error)
-      };
-    }
-  }
-
+  // 兼容旧接口 clickElement，直接映射到 agent-browser click
   async clickElement(elementId: string): Promise<ToolResult> {
-    try {
-      await this.browser.clickElement(elementId);
-
-      return {
-        success: true,
-        output: `Clicked ${elementId}`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error
-          ? error.message
-          : String(error)
-      };
-    }
+    return this.click(elementId);
   }
 
-  async click(selector: string): Promise<ToolResult> {
+  // 填表/输入文本
+  async type(selectorOrRef: string, text: string): Promise<ToolResult> {
     try {
-      await this.browser.click(selector);
-
+      const output = this.runCmd(`npx agent-browser fill "${selectorOrRef}" "${text}"`);
       return {
         success: true,
-        output: `Clicked ${selector}`
+        output: `Typed "${text}" into ${selectorOrRef}`
       };
     } catch (error) {
       return {
@@ -114,14 +82,24 @@ export class BrowserTools {
     }
   }
 
-  async type(selector: string, text: string): Promise<ToolResult> {
+  // 后退
+  async back(): Promise<ToolResult> {
     try {
-      await this.browser.type(selector, text);
-
+      this.runCmd(`npx agent-browser back`);
+      return { success: true, output: "Navigated back" };
+    } catch (error) {
       return {
-        success: true,
-        output: `Typed into ${selector}`
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       };
+    }
+  }
+
+  // 前进
+  async forward(): Promise<ToolResult> {
+    try {
+      this.runCmd(`npx agent-browser forward`);
+      return { success: true, output: "Navigated forward" };
     } catch (error) {
       return {
         success: false,

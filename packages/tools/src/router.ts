@@ -26,6 +26,12 @@ export class ToolRouter {
       case "browser.inspect":
         return this.browserTools.inspect();
 
+      case "browser.back":
+        return this.browserTools.back();
+
+      case "browser.forward":
+        return this.browserTools.forward();
+
       case "browser.open":
         return this.browserTools.open(
           String(call.arguments.url)
