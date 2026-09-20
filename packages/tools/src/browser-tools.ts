@@ -9,6 +9,44 @@ export interface ToolResult {
 export class BrowserTools {
   constructor(private browser: BraveBrowser) {}
 
+  async back(): Promise<ToolResult> {
+    try {
+      await this.browser.back();
+
+      return {
+        success: true,
+        output: "Navigated back"
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error)
+      };
+    }
+  }
+
+  async forward(): Promise<ToolResult> {
+    try {
+      await this.browser.forward();
+
+      return {
+        success: true,
+        output: "Navigated forward"
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error)
+      };
+    }
+  }
+
   async open(url: string): Promise<ToolResult> {
     try {
       const result = await this.browser.open(url);

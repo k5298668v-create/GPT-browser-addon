@@ -1,10 +1,21 @@
-import type { ToolCall } from "@localengineer/tools";
-import type { Planner, PlannerObservation } from "./planner.js";
+import type {
+  Planner,
+  PlannerDecision,
+  PlannerObservation
+} from "./planner.js";
 
 interface InspectLink {
   id: string;
   text: string;
   href: string;
+}
+
+interface InspectInput {
+  id: string;
+  type: string;
+  name: string;
+  placeholder: string;
+  ariaLabel: string;
 }
 
 interface InspectResult {
@@ -17,41 +28,53 @@ interface InspectResult {
       id: string;
       text: string;
     }>;
-    inputs: Array<{
-      id: string;
-      type: string;
-      name: string;
-      placeholder: string;
-      ariaLabel: string;
-    }>;
+    inputs: InspectInput[];
   };
   error?: string;
 }
 
-/**
- * Basic local browser planner.
- *
- * This is intentionally deterministic.
- * It gives us a stable planner implementation that can later
- * be replaced by an LLM without changing AgentLoop or ToolRouter.
- */
+interface TypeAction {
+  target: string;
+  text: string;
+}
+
 export class BrowserPlanner implements Planner {
   private step = 0;
+
   private wantsRead = false;
   private wantsClick = false;
+  private wantsType = false;
+  private wantsScroll = false;
+
   private targetText = "";
+
+  private typeActions: TypeAction[] = [];
+  private typeIndex = 0;
+
+  private scrollDirection: "up" | "down" = "down";
+  private scrollAmount = 700;
 
   reset(): void {
     this.step = 0;
+
     this.wantsRead = false;
     this.wantsClick = false;
+    this.wantsType = false;
+    this.wantsScroll = false;
+
     this.targetText = "";
+
+    this.typeActions = [];
+    this.typeIndex = 0;
+
+    this.scrollDirection = "down";
+    this.scrollAmount = 700;
   }
 
   plan(
     task: string,
     observation?: PlannerObservation
-  ): ToolCall | null {
+  ): PlannerDecision {
     const lower = task.toLowerCase();
 
     this.wantsRead =
@@ -61,55 +84,272 @@ export class BrowserPlanner implements Planner {
 
     this.wantsClick = lower.includes("click");
 
+    this.wantsType =
+      lower.includes("type") ||
+      lower.includes("enter") ||
+      lower.includes("fill");
+
+    this.wantsScroll = lower.includes("scroll");
+
     if (this.wantsClick) {
       this.targetText = this.extractClickTarget(task);
     }
 
+    if (this.wantsType && this.typeActions.length === 0) {
+      this.typeActions = this.extractTypeActions(task);
+    }
+
+    if (this.wantsScroll) {
+      this.scrollDirection =
+        lower.includes("up") ? "up" : "down";
+
+      const amountMatch =
+        lower.match(/(\d+)\s*(?:px|pixels)?/);
+
+      if (amountMatch) {
+        this.scrollAmount = Number(amountMatch[1]);
+      }
+    }
+
     /*
-     * Step 1:
-     * Find a URL in the user's task.
+     * Step 1: open the requested URL.
      */
     if (this.step === 0) {
       const url = this.extractUrl(task);
 
       if (!url) {
-        console.log("Planner: No URL found in task.");
-        return null;
+        return {
+          type: "failed",
+          reason: "No URL found in task."
+        };
       }
 
       this.step++;
 
       return {
-        name: "browser.open",
-        arguments: {
-          url
+        type: "action",
+        call: {
+          name: "browser.open",
+          arguments: {
+            url
+          }
         }
       };
     }
 
     /*
-     * Click workflow:
+     * Form workflow:
      *
      * open
      *   ↓
      * inspect
      *   ↓
-     * find matching element
-     *   ↓
-     * clickElement
+     * type field
      *   ↓
      * inspect
+     *   ↓
+     * type next field
+     *   ↓
+     * inspect
+     *   ↓
+     * click button
      */
-    if (this.wantsClick && this.step === 1) {
+    if (this.wantsType && this.step === 1) {
       this.step++;
 
       return {
-        name: "browser.inspect",
-        arguments: {}
+        type: "action",
+        call: {
+          name: "browser.inspect",
+          arguments: {}
+        }
       };
     }
 
-    if (this.wantsClick && this.step === 2) {
+    /*
+     * After a type action, inspect before locating
+     * the next field.
+     */
+    if (
+      this.wantsType &&
+      this.typeIndex > 0 &&
+      this.typeIndex < this.typeActions.length &&
+      observation?.tool === "browser.type"
+    ) {
+      return {
+        type: "action",
+        call: {
+          name: "browser.inspect",
+          arguments: {}
+        }
+      };
+    }
+
+    /*
+     * Use inspection to locate and type the next field.
+     */
+    if (
+      this.wantsType &&
+      this.typeIndex < this.typeActions.length &&
+      observation?.tool === "browser.inspect"
+    ) {
+      const inspection =
+        observation.result as InspectResult | undefined;
+
+      const inputs = inspection?.output?.inputs ?? [];
+      const action = this.typeActions[this.typeIndex];
+
+      if (!action) {
+        return {
+          type: "failed",
+          reason: "No remaining type action."
+        };
+      }
+
+      const target = inputs.find((input) => {
+        const haystack = [
+          input.name,
+          input.placeholder,
+          input.ariaLabel,
+          input.type
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return (
+          haystack.includes(action.target.toLowerCase()) ||
+          input.name.toLowerCase() ===
+            action.target.toLowerCase()
+        );
+      });
+
+      if (!target) {
+        return {
+          type: "failed",
+          reason:
+            `Could not find input "${action.target}".`
+        };
+      }
+
+      this.typeIndex++;
+
+      let selector: string;
+
+      if (target.name) {
+        selector =
+          target.type === "textarea"
+            ? `textarea[name="${target.name}"]`
+            : `input[name="${target.name}"]`;
+      } else if (target.placeholder) {
+        selector =
+          target.type === "textarea"
+            ? `textarea[placeholder="${target.placeholder}"]`
+            : `input[placeholder="${target.placeholder}"]`;
+      } else {
+        return {
+          type: "failed",
+          reason:
+            `Input "${action.target}" has no usable selector.`
+        };
+      }
+
+      return {
+        type: "action",
+        call: {
+          name: "browser.type",
+          arguments: {
+            selector,
+            text: action.text
+          }
+        }
+      };
+    }
+
+    /*
+     * Once all fields are typed, inspect before clicking.
+     */
+    if (
+      this.wantsType &&
+      this.wantsClick &&
+      this.typeIndex >= this.typeActions.length &&
+      observation?.tool === "browser.type"
+    ) {
+      return {
+        type: "action",
+        call: {
+          name: "browser.inspect",
+          arguments: {}
+        }
+      };
+    }
+
+    /*
+     * After typing, click the requested button.
+     */
+    if (
+      this.wantsClick &&
+      this.wantsType &&
+      this.typeIndex >= this.typeActions.length &&
+      observation?.tool === "browser.inspect"
+    ) {
+      const inspection =
+        observation.result as InspectResult | undefined;
+
+      const buttons = inspection?.output?.buttons ?? [];
+
+      const target = buttons.find(
+        (button) =>
+          button.text
+            .trim()
+            .toLowerCase()
+            .includes(this.targetText.toLowerCase())
+      );
+
+      if (!target) {
+        return {
+          type: "failed",
+          reason:
+            `Could not find button "${this.targetText}".`
+        };
+      }
+
+      this.step++;
+
+      return {
+        type: "action",
+        call: {
+          name: "browser.clickElement",
+          arguments: {
+            elementId: target.id
+          }
+        }
+      };
+    }
+
+    /*
+     * Click-only workflow.
+     */
+    if (
+      this.wantsClick &&
+      !this.wantsType &&
+      this.step === 1
+    ) {
+      this.step++;
+
+      return {
+        type: "action",
+        call: {
+          name: "browser.inspect",
+          arguments: {}
+        }
+      };
+    }
+
+    if (
+      this.wantsClick &&
+      !this.wantsType &&
+      this.step === 2
+    ) {
       const inspection =
         observation?.result as InspectResult | undefined;
 
@@ -124,49 +364,91 @@ export class BrowserPlanner implements Planner {
       );
 
       if (!target) {
-        console.log(
-          `Planner: Could not find link "${this.targetText}".`
-        );
-
-        return null;
+        return {
+          type: "failed",
+          reason:
+            `Could not find link "${this.targetText}".`
+        };
       }
 
       this.step++;
 
       return {
-        name: "browser.clickElement",
-        arguments: {
-          elementId: target.id
+        type: "action",
+        call: {
+          name: "browser.clickElement",
+          arguments: {
+            elementId: target.id
+          }
         }
       };
     }
 
-    if (this.wantsClick && this.step === 3) {
+    /*
+     * Verify navigation after a click.
+     */
+    if (
+      this.wantsClick &&
+      !this.wantsType &&
+      this.step === 3
+    ) {
       this.step++;
 
       return {
-        name: "browser.inspect",
-        arguments: {}
+        type: "action",
+        call: {
+          name: "browser.inspect",
+          arguments: {}
+        }
       };
     }
 
     /*
-     * Read workflow:
-     *
-     * open
-     *   ↓
-     * read
+     * Read workflow.
      */
-    if (this.wantsRead && this.step === 1) {
+    if (
+      this.wantsRead &&
+      !this.wantsClick &&
+      !this.wantsType &&
+      this.step === 1
+    ) {
       this.step++;
 
       return {
-        name: "browser.read",
-        arguments: {}
+        type: "action",
+        call: {
+          name: "browser.read",
+          arguments: {}
+        }
       };
     }
 
-    return null;
+    /*
+     * Scroll workflow.
+     */
+    if (
+      this.wantsScroll &&
+      !this.wantsClick &&
+      !this.wantsType &&
+      this.step === 1
+    ) {
+      this.step++;
+
+      return {
+        type: "action",
+        call: {
+          name: "browser.scroll",
+          arguments: {
+            direction: this.scrollDirection,
+            amount: this.scrollAmount
+          }
+        }
+      };
+    }
+
+    return {
+      type: "done"
+    };
   }
 
   private extractUrl(task: string): string | null {
@@ -183,7 +465,7 @@ export class BrowserPlanner implements Planner {
 
   private extractClickTarget(task: string): string {
     const match = task.match(
-      /click\s+(?:the\s+)?["']?(.+?)["']?(?:\s+link|\s+button)?$/i
+      /click\s+(?:the\s+)?["']?(.+?)["']?(?:\s+link|\s+button)?(?:\s*$)/i
     );
 
     if (!match) {
@@ -195,5 +477,30 @@ export class BrowserPlanner implements Planner {
       .replace(/\s+link$/i, "")
       .replace(/\s+button$/i, "")
       .trim();
+  }
+
+  private extractTypeActions(task: string): TypeAction[] {
+    const actions: TypeAction[] = [];
+
+    const fieldPattern =
+      /(?:enter|type|fill)\s+(?:my\s+|the\s+)?(name|message)\s+(?:(?:as|with)\s+)?(.+?)(?=,\s*(?:(?:and\s+)?(?:enter|type|fill)\b|(?:and\s+)?click\b)|\s+and\s+(?:enter|type|fill)\b|\s+and\s+click\b|$)/gi;
+
+    let match: RegExpExecArray | null;
+
+    while ((match = fieldPattern.exec(task)) !== null) {
+      const target = match[1].toLowerCase();
+      const text = match[2].trim();
+
+      if (!text) {
+        continue;
+      }
+
+      actions.push({
+        target,
+        text
+      });
+    }
+
+    return actions;
   }
 }

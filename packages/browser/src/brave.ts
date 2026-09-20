@@ -194,6 +194,22 @@ export class BraveBrowser {
     };
   }
 
+  async back(): Promise<void> {
+    const page = this.getPage();
+
+    await page.goBack({
+      waitUntil: "domcontentloaded"
+    });
+  }
+
+  async forward(): Promise<void> {
+    const page = this.getPage();
+
+    await page.goForward({
+      waitUntil: "domcontentloaded"
+    });
+  }
+
   async close(): Promise<void> {
     await this.browser?.close();
     this.browser = undefined;

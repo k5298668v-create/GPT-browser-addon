@@ -5,11 +5,24 @@ export interface PlannerObservation {
   result?: unknown;
 }
 
+export type PlannerDecision =
+  | {
+      type: "action";
+      call: ToolCall;
+    }
+  | {
+      type: "done";
+    }
+  | {
+      type: "failed";
+      reason: string;
+    };
+
 export interface Planner {
   reset(): void;
 
   plan(
     task: string,
     observation?: PlannerObservation
-  ): ToolCall | null;
+  ): PlannerDecision;
 }

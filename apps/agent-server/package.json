@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "plan-a": "tsx src/plan-a-cli.ts"
   },
   "dependencies": {
     "@localengineer/agent": "0.1.0"
